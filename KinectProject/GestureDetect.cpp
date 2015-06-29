@@ -22,6 +22,44 @@ inline void SafeRelease(Interface *& pInterfaceToRelease)
 	}
 }
 
+class robot {
+public:
+	//Robot states varriable
+	enum RobotStates { 
+		rIdle, 
+		rInitial, 
+		rSayHi 
+	};
+	void setRobotStates(RobotStates inputStates) {
+		robotStates = inputStates;
+	}
+	RobotStates getRobotState(void) {
+		return robotStates;
+	}
+	
+private:
+	RobotStates robotStates = rIdle;
+};
+
+class kinect {
+public:
+	//Kinect states variable
+	enum KinectStates {
+		kIdle,
+		kDetectGesture,
+		kFaceDetect
+	};
+	void setKinectStates(KinectStates inputStates) {
+		kinectStates = inputStates;
+	}
+	KinectStates getKinectState(void) {
+		return kinectStates;
+	}
+
+private:
+	KinectStates kinectStates = kIdle;
+};
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 
@@ -185,13 +223,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			}
 		}
 	}
-	//Kinect states variable
-	enum KinectStates {kIdle, kDetectGesture, kFaceDetect};
-	KinectStates kinectStates = kIdle;
 
-	//Robot states varriable
-	enum RobotStates{rIdle, rInitial, rSayHi};
-	RobotStates robotStates = rIdle;
+	kinect vision;
+	robot pili;
+
 
 
 
@@ -210,94 +245,95 @@ int _tmain(int argc, _TCHAR* argv[])
 		SafeRelease(pColorFrame);
 		IBodyFrame* pBodyFrame = nullptr;
 		// Kinect state machine
-		switch(kinectStates) {
-			case kIdle:
-				break;
-			case kDetectGesture:
-				hResult = pBodyReader->AcquireLatestFrame(&pBodyFrame);
+		switch(vision.getKinectState()) {
+		case kinect::kIdle:
+			break;
+		case kinect::kDetectGesture:
+			hResult = pBodyReader->AcquireLatestFrame(&pBodyFrame);
+			if (SUCCEEDED(hResult)) {
+				IBody* pBody[BODY_COUNT] = { 0 };
+				hResult = pBodyFrame->GetAndRefreshBodyData(BODY_COUNT, pBody);
 				if (SUCCEEDED(hResult)) {
-					IBody* pBody[BODY_COUNT] = { 0 };
-					hResult = pBodyFrame->GetAndRefreshBodyData(BODY_COUNT, pBody);
-					if (SUCCEEDED(hResult)) {
-						for (int count = 0; count < BODY_COUNT; count++) {
-							BOOLEAN bTracked = false;
-							hResult = pBody[count]->get_IsTracked(&bTracked);
-							if (SUCCEEDED(hResult) && bTracked) {
-								// Joint
-								Joint joint[JointType::JointType_Count];
-								hResult = pBody[count]->GetJoints(JointType::JointType_Count, joint);
-								if (SUCCEEDED(hResult)) {
-									// show joints
-									for (int type = 0; type < JointType::JointType_Count; type++) {
-										ColorSpacePoint colorSpacePoint = { 0 };
-										pCoordinateMapper->MapCameraPointToColorSpace(joint[type].Position, &colorSpacePoint);
-										int x = static_cast<int>(colorSpacePoint.X);
-										int y = static_cast<int>(colorSpacePoint.Y);
-										if ((x >= 10) && (x < width - 10) && (y >= 10) && (y < height - 10)) {
-											cv::circle(bufferMat, cv::Point(x, y), 5, static_cast< cv::Scalar >(color[count]), -1, CV_AA);
-										}
+					for (int count = 0; count < BODY_COUNT; count++) {
+						BOOLEAN bTracked = false;
+						hResult = pBody[count]->get_IsTracked(&bTracked);
+						if (SUCCEEDED(hResult) && bTracked) {
+							// Joint
+							Joint joint[JointType::JointType_Count];
+							hResult = pBody[count]->GetJoints(JointType::JointType_Count, joint);
+							if (SUCCEEDED(hResult)) {
+								// show joints
+								for (int type = 0; type < JointType::JointType_Count; type++) {
+									ColorSpacePoint colorSpacePoint = { 0 };
+									pCoordinateMapper->MapCameraPointToColorSpace(joint[type].Position, &colorSpacePoint);
+									int x = static_cast<int>(colorSpacePoint.X);
+									int y = static_cast<int>(colorSpacePoint.Y);
+									if ((x >= 10) && (x < width - 10) && (y >= 10) && (y < height - 10)) {
+										cv::circle(bufferMat, cv::Point(x, y), 5, static_cast< cv::Scalar >(color[count]), -1, CV_AA);
 									}
 								}
+							}
 
-								// Set TrackingID to Detect Gesture
-								UINT64 trackingId = _UI64_MAX;
-								hResult = pBody[count]->get_TrackingId(&trackingId);
-								if (SUCCEEDED(hResult)) {
-									pGestureSource[count]->put_TrackingId(trackingId);
-								}
+							// Set TrackingID to Detect Gesture
+							UINT64 trackingId = _UI64_MAX;
+							hResult = pBody[count]->get_TrackingId(&trackingId);
+							if (SUCCEEDED(hResult)) {
+								pGestureSource[count]->put_TrackingId(trackingId);
 							}
 						}
-						cv::resize(bufferMat, bodyMat, cv::Size(), 0.5, 0.5);
 					}
-					for (int count = 0; count < BODY_COUNT; count++) {
-						SafeRelease(pBody[count]);
-					}
+					cv::resize(bufferMat, bodyMat, cv::Size(), 0.5, 0.5);
 				}
-				SafeRelease(pBodyFrame);
-
-				// Detect Gesture
-				std::system("cls");
 				for (int count = 0; count < BODY_COUNT; count++) {
-					IVisualGestureBuilderFrame* pGestureFrame = nullptr;
-					hResult = pGestureReader[count]->CalculateAndAcquireLatestFrame(&pGestureFrame);
-					if (SUCCEEDED(hResult) && pGestureFrame != nullptr) {
-						BOOLEAN bGestureTracked = false;
-						hResult = pGestureFrame->get_IsTrackingIdValid(&bGestureTracked);
-						if (SUCCEEDED(hResult) && bGestureTracked) {
-							// Discrete Gesture (Sample HandUp.gba is Action to Hand Up above the head.)
-							IDiscreteGestureResult* pGestureResult = nullptr;
-							hResult = pGestureFrame->get_DiscreteGestureResult(pGesture, &pGestureResult);
-							if (SUCCEEDED(hResult) && pGestureResult != nullptr) {
-								BOOLEAN bDetected = false;
-								hResult = pGestureResult->get_Detected(&bDetected);
-								if (SUCCEEDED(hResult) && bDetected) {
-									std::cout << "Detected Gesture" << std::endl;
-									kinectStates = kIdle;
-									robotStates = rSayHi;
-								}
-							}
-
-							/*// Continuous Gesture (Sample Swipe.gba is Action to Swipe the hand in horizontal direction.)
-							IContinuousGestureResult* pGestureResult = nullptr;
-							hResult = pGestureFrame->get_ContinuousGestureResult( pGesture, &pGestureResult );
-							if( SUCCEEDED( hResult ) && pGestureResult != nullptr ){
-							float progress = 0.0f;
-							hResult = pGestureResult->get_Progress( &progress );
-							if( SUCCEEDED( hResult ) ){
-							std::cout << "Progress: " + std::to_string( progress ) << std::endl;
-							}
-							}*/
-
-							SafeRelease(pGestureResult);
-						}
-					}
-					SafeRelease(pGestureFrame);
+					SafeRelease(pBody[count]);
 				}
-				break;
-			case kFaceDetect:
-				break;
-			default:
-				break;
+			}
+			SafeRelease(pBodyFrame);
+
+			// Detect Gesture
+			std::system("cls");
+			for (int count = 0; count < BODY_COUNT; count++) {
+				IVisualGestureBuilderFrame* pGestureFrame = nullptr;
+				hResult = pGestureReader[count]->CalculateAndAcquireLatestFrame(&pGestureFrame);
+				if (SUCCEEDED(hResult) && pGestureFrame != nullptr) {
+					BOOLEAN bGestureTracked = false;
+					hResult = pGestureFrame->get_IsTrackingIdValid(&bGestureTracked);
+					if (SUCCEEDED(hResult) && bGestureTracked) {
+						// Discrete Gesture (Sample HandUp.gba is Action to Hand Up above the head.)
+						IDiscreteGestureResult* pGestureResult = nullptr;
+						hResult = pGestureFrame->get_DiscreteGestureResult(pGesture, &pGestureResult);
+						if (SUCCEEDED(hResult) && pGestureResult != nullptr) {
+							BOOLEAN bDetected = false;
+							hResult = pGestureResult->get_Detected(&bDetected);
+							if (SUCCEEDED(hResult) && bDetected) {
+								std::cout << "Detected Gesture" << std::endl;
+								// if success detecting gesture, change state.
+								vision.setKinectStates(kinect::kIdle);	
+								pili.setRobotStates(robot::rSayHi);
+							}
+						}
+
+						/*// Continuous Gesture (Sample Swipe.gba is Action to Swipe the hand in horizontal direction.)
+						IContinuousGestureResult* pGestureResult = nullptr;
+						hResult = pGestureFrame->get_ContinuousGestureResult( pGesture, &pGestureResult );
+						if( SUCCEEDED( hResult ) && pGestureResult != nullptr ){
+						float progress = 0.0f;
+						hResult = pGestureResult->get_Progress( &progress );
+						if( SUCCEEDED( hResult ) ){
+						std::cout << "Progress: " + std::to_string( progress ) << std::endl;
+						}
+						}*/
+
+						SafeRelease(pGestureResult);
+					}
+				}
+				SafeRelease(pGestureFrame);
+			}
+			break;
+		case kinect::kFaceDetect:
+			break;
+		default:
+			break;
 		}
 		// show image
 		cv::imshow("Camera", bodyMat);
@@ -305,40 +341,42 @@ int _tmain(int argc, _TCHAR* argv[])
 			break;
 		}
 		else if (cv::waitKey(10) == VK_SPACE) {	// press space key and change kinectStates to detect gesture
-			kinectStates = kDetectGesture;
-			robotStates = rInitial;
+			vision.setKinectStates(kinect::kDetectGesture);
+			pili.setRobotStates(robot::rInitial);
 		}
 
 		// Robot state machine
-		switch (robotStates) {
-			case rIdle:
-					/*do
-					{
-						serial.read(serialBuff, RX_BUFFSIZE);
-						Sleep(100);
-					} while (serialBuff[0] == '\0');.
-					cout << "serial port read: " << serialBuff << endl;
-					serialBuff[0] = '\0';*/
-					//serial.write(cBuff);
-				break;
-			case rInitial:
-				serial.write("r");
-				Sleep(5000);
-				serial.write("0");
-				Sleep(500);
-				robotStates = rIdle;
-				break;
-			case rSayHi:
-				serial.write("b");
-				Sleep(5000);
-				serial.write("j");
-				Sleep(18000);
-				serial.write("g");
-				Sleep(3000);
-				robotStates = rIdle;
-				break;
-			default:
-				break;
+		switch (pili.getRobotState()) {
+		case robot::rIdle:
+			/*do
+			{
+				serial.read(serialBuff, RX_BUFFSIZE);
+				Sleep(100);
+			} while (serialBuff[0] == '\0');.
+			cout << "serial port read: " << serialBuff << endl;
+			serialBuff[0] = '\0';*/
+			//serial.write(cBuff);
+			break;
+		case robot::rInitial:
+			serial.write("r");
+			Sleep(5000);
+			serial.write("0");
+			Sleep(500);
+			pili.setRobotStates(robot::rIdle);
+			break;
+		case robot::rSayHi:
+			serial.write("b");
+			Sleep(5000);
+			serial.write("j");
+			Sleep(16000);
+			serial.write("g");
+			Sleep(3000);
+			// continuous detect gesture
+			vision.setKinectStates(kinect::kDetectGesture);
+			pili.setRobotStates(robot::rIdle);
+			break;
+		default:
+			break;
 		}
 		
 
