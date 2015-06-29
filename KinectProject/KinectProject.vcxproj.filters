@@ -24,6 +24,12 @@
     <ClCompile Include="Serial.cpp">
       <Filter>資源檔</Filter>
     </ClCompile>
+    <ClCompile Include="classKinect.cpp">
+      <Filter>資源檔</Filter>
+    </ClCompile>
+    <ClCompile Include="classRobot.cpp">
+      <Filter>資源檔</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -33,6 +39,12 @@
       <Filter>標頭檔</Filter>
     </ClInclude>
     <ClInclude Include="Serial.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="classKinect.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="classRobot.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
   </ItemGroup>

@@ -7,64 +7,17 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <Serial.h>
+#include "Serial.h"
+#include "classKinect.h"
+#include "classRobot.h"
 
 using namespace std;
-
-#define RX_BUFFSIZE 20
-
-template<class Interface>
-inline void SafeRelease(Interface *& pInterfaceToRelease)
-{
-	if (pInterfaceToRelease != NULL) {
-		pInterfaceToRelease->Release();
-		pInterfaceToRelease = NULL;
-	}
-}
-
-class robot {
-public:
-	//Robot states varriable
-	enum RobotStates { 
-		rIdle, 
-		rInitial, 
-		rSayHi 
-	};
-	void setRobotStates(RobotStates inputStates) {
-		robotStates = inputStates;
-	}
-	RobotStates getRobotState(void) {
-		return robotStates;
-	}
-	
-private:
-	RobotStates robotStates = rIdle;
-};
-
-class kinect {
-public:
-	//Kinect states variable
-	enum KinectStates {
-		kIdle,
-		kDetectGesture,
-		kFaceDetect
-	};
-	void setKinectStates(KinectStates inputStates) {
-		kinectStates = inputStates;
-	}
-	KinectStates getKinectState(void) {
-		return kinectStates;
-	}
-
-private:
-	KinectStates kinectStates = kIdle;
-};
 
 int _tmain(int argc, _TCHAR* argv[])
 {
 
 	//--------------------initialize-----------------------
-	if (argc != 2)
+	if (argc != 2)		// set test arguments, need to be COM?
 	{
 
 		cout << "press enter to quit" << endl;
@@ -82,13 +35,13 @@ int _tmain(int argc, _TCHAR* argv[])
 		cout << msg << endl;
 	}
 	tstring commPortName(argv[1]);
-	Serial serial(commPortName, 115200);
-	cv::setUseOptimized(true);
+	Serial serial(commPortName, 115200);		//set baud rate to 115200
 	serial.flush();
-	char cBuff[10] = "";
-	char serialBuff[RX_BUFFSIZE] = "";
+	//char cBuff[10] = "";
+	//char serialBuff[RX_BUFFSIZE] = "";
 
 	// Kinect initial
+	cv::setUseOptimized(true);
 	IKinectSensor* pSensor;
 	HRESULT hResult = S_OK;
 	hResult = GetDefaultKinectSensor(&pSensor);
@@ -224,10 +177,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 	}
 
+	// initial object
 	kinect vision;
 	robot pili;
-
-
 
 
 	//----------------------Main loop--------------------------

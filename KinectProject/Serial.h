@@ -19,6 +19,7 @@
 #include <string>
 #include <windows.h>
 
+#define RX_BUFFSIZE 20
 typedef std::basic_string<TCHAR> tstring;
 
 class Serial

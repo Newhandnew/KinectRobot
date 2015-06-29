@@ -84,7 +84,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(KINECTSDK20_DIR)\inc;$(OPENCV_DIR)\..\..\include;D:\GitHub\KinectRobot\KinectProject\RS232</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(KINECTSDK20_DIR)\inc;$(OPENCV_DIR)\..\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -116,7 +116,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(KINECTSDK20_DIR)\inc;$(OPENCV_DIR)\..\..\include;D:\GitHub\KinectRobot\KinectProject\RS232</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(KINECTSDK20_DIR)\inc;$(OPENCV_DIR)\..\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -130,11 +130,15 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="classKinect.cpp" />
+    <ClCompile Include="classRobot.cpp" />
     <ClCompile Include="GestureDetect.cpp" />
     <ClCompile Include="Serial.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="classKinect.h" />
+    <ClInclude Include="classRobot.h" />
     <ClInclude Include="Serial.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
