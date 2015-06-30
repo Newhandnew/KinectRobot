@@ -183,10 +183,67 @@ int _tmain(int argc, _TCHAR* argv[])
 	kinect vision;
 	robot pili;
 	pili.fManual = 0;
-
+	
 
 	//----------------------Main loop--------------------------
 	while (1) {
+		// Robot state machine
+		switch (pili.getRobotState()) {
+		case robot::rIdle:
+			/*do
+			{
+			serial.read(serialBuff, RX_BUFFSIZE);
+			Sleep(100);
+			} while (serialBuff[0] == '\0');.
+			cout << "serial port read: " << serialBuff << endl;
+			serialBuff[0] = '\0';*/
+			//serial.write(cBuff);
+			break;
+		case robot::rInitial:
+			serial.write("r");
+			Sleep(5000);
+			serial.write("0");
+			Sleep(500);
+			pili.setRobotStates(robot::rIdle);
+			break;
+		case robot::rSayHi:
+			serial.write("b");
+			Sleep(5000);
+			serial.write("j");
+			Sleep(16000);
+			serial.write("h");
+			Sleep(22000);
+			serial.write("g");
+			Sleep(3000);
+			// continuous detect gesture
+			vision.setKinectStates(kinect::kDetectGesture);
+			pili.setRobotStates(robot::rIdle);
+			break;
+		case robot::rManual:
+			cin >> cReceiveBuff;
+			if (cReceiveBuff[0] == 'q') {
+				pili.fManual = 0;
+				pili.setRobotStates(robot::rIdle);
+				cout << "Robot normal mode" << endl;
+			}
+			else {
+				serial.write(cReceiveBuff);
+			}
+			Sleep(300);
+			do
+			{
+				serialBuff[0] = '\0';
+				serial.read(serialBuff, RX_BUFFSIZE);
+				cout << serialBuff << endl;
+				Sleep(100);
+			} while (serialBuff[0] != '\0');
+			serialBuff[0] = '\0';
+			break;
+		default:
+			break;
+		}
+
+
 		//Kinect module
 		// always get color frame
 		IColorFrame* pColorFrame = nullptr;
@@ -224,7 +281,7 @@ int _tmain(int argc, _TCHAR* argv[])
 									int x = static_cast<int>(colorSpacePoint.X);
 									int y = static_cast<int>(colorSpacePoint.Y);
 									if ((x >= 10) && (x < width - 10) && (y >= 10) && (y < height - 10)) {
-										cv::circle(bufferMat, cv::Point(x, y), 5, static_cast< cv::Scalar >(color[count]), -1, CV_AA);
+										cv::circle(bufferMat, cv::Point(x, y), 1, static_cast< cv::Scalar >(color[count]), -1, CV_AA);
 									}
 								}
 							}
@@ -263,6 +320,7 @@ int _tmain(int argc, _TCHAR* argv[])
 							if (SUCCEEDED(hResult) && bDetected) {
 								std::cout << "Detected Gesture" << std::endl;
 								// if success detecting gesture, change state.
+								cv::putText(bodyMat, "Hello!!", cv::Point(300, 120), cv::FONT_HERSHEY_SCRIPT_COMPLEX, 5, cv::Scalar(100, 50, 0), 6);
 								vision.setKinectStates(kinect::kIdle);	
 								pili.setRobotStates(robot::rSayHi);
 							}
@@ -293,53 +351,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		// show image
 		cv::imshow("Camera", bodyMat);
 
-		// Robot state machine
-		switch (pili.getRobotState()) {
-		case robot::rIdle:
-			/*do
-			{
-				serial.read(serialBuff, RX_BUFFSIZE);
-				Sleep(100);
-			} while (serialBuff[0] == '\0');.
-			cout << "serial port read: " << serialBuff << endl;
-			serialBuff[0] = '\0';*/
-			//serial.write(cBuff);
-			break;
-		case robot::rInitial:
-			serial.write("r");
-			Sleep(5000);
-			serial.write("0");
-			Sleep(500);
-			pili.setRobotStates(robot::rIdle);
-			break;
-		case robot::rSayHi:
-			serial.write("b");
-			Sleep(5000);
-			serial.write("j");
-			Sleep(16000);
-			serial.write("h");
-			Sleep(21000);
-			serial.write("g");
-			Sleep(3000);
-			// continuous detect gesture
-			vision.setKinectStates(kinect::kDetectGesture);
-			pili.setRobotStates(robot::rIdle);
-			break;
-		case robot::rManual:
-			cin >> cReceiveBuff;
-			if (cReceiveBuff[0] == 'q') {
-				pili.fManual = 0;
-				pili.setRobotStates(robot::rIdle);
-				cout << "Robot normal mode" << endl;
-			}
-			else {
-				serial.write(cReceiveBuff);
-				serial.read(serialBuff, RX_BUFFSIZE);
-			}
-			break;
-		default:
-			break;
-		}
 
 		// detect key, and do action
 		cKey = cv::waitKey(10);
@@ -357,6 +368,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			// if in manual mode, change to idle
 			if (pili.fManual == 0) {
 				pili.fManual = 1;
+				serial.flush();
 				pili.setRobotStates(robot::rManual);
 				cout << "Robot manual mode" << endl;
 			}
