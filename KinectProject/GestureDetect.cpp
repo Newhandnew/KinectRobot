@@ -37,8 +37,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	tstring commPortName(argv[1]);
 	Serial serial(commPortName, 115200);		//set baud rate to 115200
 	serial.flush();
-	//char cBuff[10] = "";
-	//char serialBuff[RX_BUFFSIZE] = "";
+	// Communication variable
+	char cKey;
+	char cReceiveBuff[10] = "";
+	char serialBuff[RX_BUFFSIZE] = "";
 
 	// Kinect initial
 	cv::setUseOptimized(true);
@@ -180,6 +182,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	// initial object
 	kinect vision;
 	robot pili;
+	pili.fManual = 0;
 
 
 	//----------------------Main loop--------------------------
@@ -289,13 +292,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		// show image
 		cv::imshow("Camera", bodyMat);
-		if (cv::waitKey(10) == VK_ESCAPE) {
-			break;
-		}
-		else if (cv::waitKey(10) == VK_SPACE) {	// press space key and change kinectStates to detect gesture
-			vision.setKinectStates(kinect::kDetectGesture);
-			pili.setRobotStates(robot::rInitial);
-		}
 
 		// Robot state machine
 		switch (pili.getRobotState()) {
@@ -321,20 +317,51 @@ int _tmain(int argc, _TCHAR* argv[])
 			Sleep(5000);
 			serial.write("j");
 			Sleep(16000);
+			serial.write("h");
+			Sleep(21000);
 			serial.write("g");
 			Sleep(3000);
 			// continuous detect gesture
 			vision.setKinectStates(kinect::kDetectGesture);
 			pili.setRobotStates(robot::rIdle);
 			break;
+		case robot::rManual:
+			cin >> cReceiveBuff;
+			if (cReceiveBuff[0] == 'q') {
+				pili.fManual = 0;
+				pili.setRobotStates(robot::rIdle);
+				cout << "Robot normal mode" << endl;
+			}
+			else {
+				serial.write(cReceiveBuff);
+				serial.read(serialBuff, RX_BUFFSIZE);
+			}
+			break;
 		default:
 			break;
 		}
-		
 
-
-
-		
+		// detect key, and do action
+		cKey = cv::waitKey(10);
+		// if press ESC, exit program
+		if (cKey == VK_ESCAPE)
+			break;
+		// change to different mode by pressing specific key.
+		switch (cKey) {
+		// press space key and change kinectStates to detect gesture
+		case VK_SPACE:
+			vision.setKinectStates(kinect::kDetectGesture);
+			pili.setRobotStates(robot::rInitial);
+			break;
+		case 'm':
+			// if in manual mode, change to idle
+			if (pili.fManual == 0) {
+				pili.fManual = 1;
+				pili.setRobotStates(robot::rManual);
+				cout << "Robot manual mode" << endl;
+			}
+			break;
+		}
 	}
 	//--------------------Release Memory------------------------
 	SafeRelease(pColorSource);

@@ -3,10 +3,12 @@
 class robot {
 public:
 	//Robot states varriable
+	bool fManual;
 	enum RobotStates {
 		rIdle,
 		rInitial,
-		rSayHi
+		rSayHi,
+		rManual
 	};
 
 	void setRobotStates(RobotStates inputStates);
